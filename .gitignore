@@ -1,0 +1,18 @@
+# =========================
+# PlatformIO / Firmware
+# =========================
+.pio/
+.vscode/
+firmware/.vscode/
+
+# =========================
+# Desktop App
+# =========================
+node_modules/
+dist/
+out/
+build/
+.env
+coverage/
+.DS_Store
+*.log
