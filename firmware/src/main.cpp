@@ -8,6 +8,13 @@
 
 #include <Arduino.h>
 #include "config.h"
+#include "audio_capture.h"
+
+// ---------------------------------------------------------------------------
+// Test audio buffer — allocated in PSRAM for large captures
+// ---------------------------------------------------------------------------
+#define TEST_CAPTURE_SAMPLES  16000  // 1 second of audio at 16kHz
+static int16_t* audio_buffer = nullptr;
 
 // ---------------------------------------------------------------------------
 // Setup
@@ -29,11 +36,50 @@ void setup() {
                   CONFIDENCE_THRESHOLD * 100, CONSECUTIVE_REQUIRED);
     Serial.println("========================================");
     Serial.println();
+
+    // Initialize I2S microphone
+    if (audio_init(SAMPLE_RATE) != 0) {
+        Serial.println("[MAIN] FATAL: Audio init failed — halting");
+        while (true) { delay(1000); }
+    }
+
+    // Allocate audio buffer in PSRAM (8MB PSRAM available on N16R8)
+    audio_buffer = (int16_t*)ps_malloc(TEST_CAPTURE_SAMPLES * sizeof(int16_t));
+    if (audio_buffer == nullptr) {
+        Serial.println("[MAIN] FATAL: Failed to allocate audio buffer in PSRAM");
+        while (true) { delay(1000); }
+    }
+
+    Serial.printf("[MAIN] Audio buffer allocated: %d samples (%d bytes) in PSRAM\n",
+                  TEST_CAPTURE_SAMPLES, TEST_CAPTURE_SAMPLES * sizeof(int16_t));
+    Serial.println("[MAIN] Ready — capturing audio every 2 seconds...\n");
 }
 
 // ---------------------------------------------------------------------------
-// Main Loop
+// Main Loop — Capture audio and print peak amplitude for testing
 // ---------------------------------------------------------------------------
 void loop() {
-    delay(1000);
+    Serial.println("[MAIN] Capturing audio...");
+
+    // Fill the buffer with audio samples
+    int result = audio_capture_buffer(audio_buffer, TEST_CAPTURE_SAMPLES);
+    if (result != 0) {
+        Serial.println("[MAIN] ERROR: Audio capture failed");
+        delay(2000);
+        return;
+    }
+
+    // Compute peak amplitude for mic verification
+    int16_t peak = 0;
+    for (int i = 0; i < TEST_CAPTURE_SAMPLES; i++) {
+        int16_t abs_val = abs(audio_buffer[i]);
+        if (abs_val > peak) peak = abs_val;
+    }
+
+    Serial.printf("[MAIN] Capture done — Peak amplitude: %d / 32767", peak);
+    if (peak < 100)       Serial.println(" ⚠ Very quiet — check mic wiring");
+    else if (peak < 1000) Serial.println(" — Low signal");
+    else                  Serial.println(" — Good signal ✓");
+
+    delay(2000);  // Wait before next capture
 }
