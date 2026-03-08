@@ -9,12 +9,18 @@
 #include <Arduino.h>
 #include "config.h"
 #include "audio_capture.h"
+#include "lora_handler.h"
 
 // ---------------------------------------------------------------------------
 // Test audio buffer — allocated in PSRAM for large captures
 // ---------------------------------------------------------------------------
 #define TEST_CAPTURE_SAMPLES  16000  // 1 second of audio at 16kHz
 static int16_t* audio_buffer = nullptr;
+
+// ---------------------------------------------------------------------------
+// Heartbeat tracking
+// ---------------------------------------------------------------------------
+static unsigned long lastHeartbeatTime = 0;
 
 // ---------------------------------------------------------------------------
 // Setup
@@ -52,6 +58,16 @@ void setup() {
 
     Serial.printf("[MAIN] Audio buffer allocated: %d samples (%d bytes) in PSRAM\n",
                   TEST_CAPTURE_SAMPLES, TEST_CAPTURE_SAMPLES * sizeof(int16_t));
+
+    // Initialize LoRa radio
+    if (!lora_init()) {
+        Serial.println("[MAIN] WARNING: LoRa init failed — continuing without radio");
+    } else {
+        // Send initial heartbeat to announce presence
+        lora_send_heartbeat();
+        lastHeartbeatTime = millis();
+    }
+
     Serial.println("[MAIN] Ready — capturing audio every 2 seconds...\n");
 }
 
@@ -77,9 +93,15 @@ void loop() {
     }
 
     Serial.printf("[MAIN] Capture done — Peak amplitude: %d / 32767", peak);
-    if (peak < 100)       Serial.println(" ⚠ Very quiet — check mic wiring");
+    if (peak < 100)       Serial.println(" — Very quiet, check mic wiring");
     else if (peak < 1000) Serial.println(" — Low signal");
-    else                  Serial.println(" — Good signal ✓");
+    else                  Serial.println(" — Good signal");
+
+    // Send periodic heartbeat via LoRa
+    if (millis() - lastHeartbeatTime >= HEARTBEAT_INTERVAL_MS) {
+        lora_send_heartbeat();
+        lastHeartbeatTime = millis();
+    }
 
     delay(2000);  // Wait before next capture
 }
