@@ -1,0 +1,17 @@
+{
+  "name": "jungle-protection-system",
+  "version": "1.0.0",
+  "description": "Single-node jungle monitoring system for LoRa-based threat detection",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron ."
+  },
+  "dependencies": {
+    "serialport": "^12.0.0",
+    "@serialport/parser-readline": "^12.0.0"
+  },
+  "devDependencies": {
+    "electron": "^29.0.0"
+  }
+}
