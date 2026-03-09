@@ -6,15 +6,18 @@
  * and transmits alerts via LoRa 433MHz.
  * ========================================================================== */
 
+// Disable quantized filterbank for better accuracy on ESP32-S3
+#define EIDSP_QUANTIZE_FILTERBANK 0
+
 #include <Arduino.h>
+#include <project-1_inferencing.h>
 #include "config.h"
 #include "audio_capture.h"
 #include "lora_handler.h"
 
 // ---------------------------------------------------------------------------
-// Test audio buffer — allocated in PSRAM for large captures
+// Audio buffer — allocated in PSRAM, sized to Edge Impulse model input
 // ---------------------------------------------------------------------------
-#define TEST_CAPTURE_SAMPLES  16000  // 1 second of audio at 16kHz
 static int16_t* audio_buffer = nullptr;
 
 // ---------------------------------------------------------------------------
@@ -23,11 +26,22 @@ static int16_t* audio_buffer = nullptr;
 static unsigned long lastHeartbeatTime = 0;
 
 // ---------------------------------------------------------------------------
+// Edge Impulse callback — converts int16 audio samples to float
+// Used by the EI signal_t interface
+// ---------------------------------------------------------------------------
+static int audio_signal_get_data(size_t offset, size_t length, float* out_ptr) {
+    for (size_t i = 0; i < length; i++) {
+        out_ptr[i] = (float)audio_buffer[offset + i] / 32768.0f;
+    }
+    return 0;
+}
+
+// ---------------------------------------------------------------------------
 // Setup
 // ---------------------------------------------------------------------------
 void setup() {
     Serial.begin(SERIAL_BAUD_RATE);
-    while (!Serial && millis() < 3000);  // Wait up to 3s for Serial
+    while (!Serial && millis() < 3000);
 
     Serial.println();
     Serial.println("========================================");
@@ -41,6 +55,14 @@ void setup() {
     Serial.printf("  Threshold  : %.0f%%  x%d consecutive\n",
                   CONFIDENCE_THRESHOLD * 100, CONSECUTIVE_REQUIRED);
     Serial.println("========================================");
+
+    // Print Edge Impulse model info
+    Serial.printf("[INFER] Model frame size : %d samples\n", EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE);
+    Serial.printf("[INFER] Sample length    : %d ms\n", EI_CLASSIFIER_RAW_SAMPLE_COUNT / 16);
+    Serial.printf("[INFER] Interval         : %.2f ms\n", (float)EI_CLASSIFIER_INTERVAL_MS);
+    Serial.printf("[INFER] Number of classes: %d\n",
+                  sizeof(ei_classifier_inferencing_categories) /
+                  sizeof(ei_classifier_inferencing_categories[0]));
     Serial.println();
 
     // Initialize I2S microphone
@@ -49,59 +71,72 @@ void setup() {
         while (true) { delay(1000); }
     }
 
-    // Allocate audio buffer in PSRAM (8MB PSRAM available on N16R8)
-    audio_buffer = (int16_t*)ps_malloc(TEST_CAPTURE_SAMPLES * sizeof(int16_t));
+    // Allocate audio buffer in PSRAM sized to EI model input
+    size_t buffer_size = EI_CLASSIFIER_RAW_SAMPLE_COUNT;
+    audio_buffer = (int16_t*)ps_malloc(buffer_size * sizeof(int16_t));
     if (audio_buffer == nullptr) {
-        Serial.println("[MAIN] FATAL: Failed to allocate audio buffer in PSRAM");
+        Serial.printf("[MAIN] FATAL: Failed to allocate audio buffer (%d bytes)\n",
+                      buffer_size * sizeof(int16_t));
         while (true) { delay(1000); }
     }
-
-    Serial.printf("[MAIN] Audio buffer allocated: %d samples (%d bytes) in PSRAM\n",
-                  TEST_CAPTURE_SAMPLES, TEST_CAPTURE_SAMPLES * sizeof(int16_t));
+    Serial.printf("[MAIN] Audio buffer allocated: %d samples in PSRAM\n", buffer_size);
 
     // Initialize LoRa radio
     if (!lora_init()) {
         Serial.println("[MAIN] WARNING: LoRa init failed — continuing without radio");
     } else {
-        // Send initial heartbeat to announce presence
         lora_send_heartbeat();
         lastHeartbeatTime = millis();
     }
 
-    Serial.println("[MAIN] Ready — capturing audio every 2 seconds...\n");
+    Serial.println("[MAIN] Sentinel active — starting inference loop\n");
 }
 
 // ---------------------------------------------------------------------------
-// Main Loop — Capture audio and print peak amplitude for testing
+// Main Loop — Capture audio → Run inference → Print results
 // ---------------------------------------------------------------------------
 void loop() {
-    Serial.println("[MAIN] Capturing audio...");
-
-    // Fill the buffer with audio samples
-    int result = audio_capture_buffer(audio_buffer, TEST_CAPTURE_SAMPLES);
+    // ---- Step 1: Capture audio ----
+    int result = audio_capture_buffer(audio_buffer, EI_CLASSIFIER_RAW_SAMPLE_COUNT);
     if (result != 0) {
         Serial.println("[MAIN] ERROR: Audio capture failed");
-        delay(2000);
+        delay(1000);
         return;
     }
 
-    // Compute peak amplitude for mic verification
-    int16_t peak = 0;
-    for (int i = 0; i < TEST_CAPTURE_SAMPLES; i++) {
-        int16_t abs_val = abs(audio_buffer[i]);
-        if (abs_val > peak) peak = abs_val;
+    // ---- Step 2: Run Edge Impulse classifier ----
+    signal_t signal;
+    signal.total_length = EI_CLASSIFIER_RAW_SAMPLE_COUNT;
+    signal.get_data     = &audio_signal_get_data;
+
+    ei_impulse_result_t ei_result = { 0 };
+    EI_IMPULSE_ERROR err = run_classifier(&signal, &ei_result, false);
+    if (err != EI_IMPULSE_OK) {
+        Serial.printf("[INFER] ERROR: Classifier failed (err=%d)\n", err);
+        delay(1000);
+        return;
     }
 
-    Serial.printf("[MAIN] Capture done — Peak amplitude: %d / 32767", peak);
-    if (peak < 100)       Serial.println(" — Very quiet, check mic wiring");
-    else if (peak < 1000) Serial.println(" — Low signal");
-    else                  Serial.println(" — Good signal");
+    // ---- Step 3: Print classification results ----
+    Serial.printf("[INFER] DSP: %d ms | Classification: %d ms\n",
+                  ei_result.timing.dsp, ei_result.timing.classification);
 
-    // Send periodic heartbeat via LoRa
+    for (size_t ix = 0; ix < EI_CLASSIFIER_LABEL_COUNT; ix++) {
+        Serial.printf("[INFER]   %s: %.4f\n",
+                      ei_result.classification[ix].label,
+                      ei_result.classification[ix].value);
+    }
+
+    // ---- Step 4: Send periodic heartbeat ----
     if (millis() - lastHeartbeatTime >= HEARTBEAT_INTERVAL_MS) {
         lora_send_heartbeat();
         lastHeartbeatTime = millis();
     }
-
-    delay(2000);  // Wait before next capture
 }
+
+// ---------------------------------------------------------------------------
+// Sensor validation — ensure model was trained for microphone input
+// ---------------------------------------------------------------------------
+#if !defined(EI_CLASSIFIER_SENSOR) || EI_CLASSIFIER_SENSOR != EI_CLASSIFIER_SENSOR_MICROPHONE
+#error "Invalid model for current sensor — must be a microphone/audio model."
+#endif
