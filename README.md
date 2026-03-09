@@ -1,73 +1,66 @@
-# Jungle Protection System
+# SilentScout — Acoustic Threat Detection System
 
-A single-node jungle monitoring system for LoRa-based threat detection. Detects illegal chainsaw and mining activity in protected forest areas using edge ML audio classification.
+We're building a system that listens for illegal chainsaw and mining sounds in forests and sends out LoRa alerts when it picks something up. The whole thing runs offline — no WiFi, no cloud — just an ESP32-S3 doing edge inference on audio and pushing alerts over 433MHz LoRa.
 
-## System Overview
+## How it works
+
+Basically there's a sensor node sitting out in the forest with a mic and an ML model. When it hears something suspicious (chainsaw, mining equipment), it classifies the sound using Edge Impulse, and if it's confident enough (85%+) for 3 consecutive readings, it fires off a LoRa packet to a gateway node. That gateway is plugged into a laptop running our Electron dashboard.
 
 ```
-┌───────────────────┐         433MHz LoRa         ┌───────────────────┐
-│  Forest Sentinel  │ ─────────────────────────▶  │  LoRa Gateway     │
-│  (ESP32-S3)       │                             │  (Receiver Node)  │
-│                   │                             └────────┬──────────┘
-│  • INMP441 Mic    │                                      │ USB Serial
-│  • Edge Impulse   │                             ┌────────▼──────────┐
-│  • LoRa SX1278    │                             │  Desktop App      │
-│  • Solar Powered  │                             │  (Electron)       │
-└───────────────────┘                             │  • Node Status    │
-                                                  │  • Alert Log      │
-                                                  │  • RSSI Chart     │
-                                                  │  • Map View       │
-                                                  └───────────────────┘
+  Sensor Node                   LoRa 433MHz              Gateway              Desktop
+┌─────────────┐                                    ┌──────────────┐     ┌──────────────┐
+│  ESP32-S3   │ ──────────────────────────────────▶│  LoRa RX     │────▶│  Electron    │
+│  INMP441    │            wireless                │  (USB serial)│     │  Dashboard   │
+│  SX1278 TX  │                                    └──────────────┘     └──────────────┘
+│  Solar+Batt │
+└─────────────┘
 ```
 
-## Project Structure
+## Repo structure
 
-| Directory | Description |
-|-----------|-------------|
-| [`firmware/`](firmware/) | ESP32-S3 sentinel node firmware (PlatformIO/Arduino) |
-| [`desktop-app/`](desktop-app/) | Electron desktop dashboard for monitoring |
+- **`firmware/`** — ESP32-S3 PlatformIO project (the sensor node)
+- **`desktop-app/`** — Electron app for monitoring alerts and node status
 
-## Components
+## Firmware (sensor node)
 
-### Firmware (Sentinel Node)
-- **Platform:** ESP32-S3 DevKitC-1 N16R8
-- **Audio:** INMP441 MEMS I2S microphone @ 16kHz
-- **ML:** Edge Impulse on-device inference (chainsaw / mining / ambient)
-- **Radio:** LoRa SX1278 433MHz for long-range alert transmission
-- **Power:** Solar + 18650 battery with light sleep optimization
-- **Alert Logic:** 3 consecutive detections at ≥85% confidence required
+- ESP32-S3 DevKitC-1 with 16MB flash and 8MB PSRAM
+- INMP441 MEMS mic over I2S, sampling at 16kHz
+- Edge Impulse model runs locally — classifies chainsaw / mining / ambient
+- LoRa SX1278 433MHz for sending alerts (no WiFi needed)
+- Solar + 18650 battery, uses light sleep to save power
+- Needs 3 consecutive detections at 85%+ confidence before triggering alert
 
-See [firmware/README.md](firmware/README.md) for build instructions and wiring guide.
+Check [firmware/README.md](firmware/README.md) for wiring and build steps.
 
-### Desktop App (Dashboard)
-- **Framework:** Electron 29
-- **Serial:** USB LoRa gateway connection @ 115200 baud
-- **Features:** Real-time node status, RSSI chart, alert log with filtering, Leaflet map view
-- **Protocol:** Newline-delimited JSON packets via serial port
+## Desktop app
 
-## Quick Start
+- Electron 29 with serial port connection to gateway
+- Shows node online/offline status, RSSI over time, alert log, and a Leaflet map
+- Expects newline-delimited JSON at 115200 baud
 
-### Firmware
+## Getting started
+
+**Firmware:**
 ```bash
 cd firmware
 pio run --target upload
 pio device monitor --baud 115200
 ```
 
-### Desktop App
+**Desktop app:**
 ```bash
 cd desktop-app
 npm install
 npm start
 ```
 
-## Hardware
+## Hardware used
 
-| Component | Model | Interface |
-|-----------|-------|-----------|
+| Part | Model | Connection |
+|------|-------|------------|
 | MCU | ESP32-S3 DevKitC-1 N16R8 | — |
-| Microphone | INMP441 MEMS | I2S (GPIO 1, 2, 42) |
-| LoRa Radio | Ra-02 SX1278 433MHz | SPI (GPIO 18, 19, 23, 5, 14, 26) |
+| Mic | INMP441 MEMS | I2S — GPIO 1, 2, 42 |
+| Radio | Ra-02 SX1278 433MHz | SPI — GPIO 18, 19, 23, 5, 14, 26 |
 | Power | 18650 + Solar Panel | 3.3V rail |
 
 ## Team

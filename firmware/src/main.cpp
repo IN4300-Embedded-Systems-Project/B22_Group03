@@ -1,5 +1,5 @@
 /* =============================================================================
- * Forest Acoustic Sentinel — Main Firmware
+ * SilentScout — Acoustic Threat Detection System
  * ESP32-S3 + INMP441 + LoRa SX1278
  *
  * Detects illegal chainsaw and mining activity using edge ML inference
@@ -83,8 +83,8 @@ void setup() {
 
     Serial.println();
     Serial.println("========================================");
-    Serial.println("  Forest Acoustic Sentinel v1.0");
-    Serial.println("  ESP32-S3 + INMP441 + LoRa SX1278");
+    Serial.println("  SilentScout v1.0");
+    Serial.println("  Acoustic Threat Detection System");
     Serial.println("========================================");
     Serial.printf("  Node ID    : %s\n", NODE_ID);
     Serial.printf("  Location   : %.4f, %.4f\n", NODE_LAT, NODE_LNG);

@@ -1,150 +1,133 @@
-# Forest Acoustic Sentinel — Firmware
+# SilentScout Firmware
 
-ESP32-S3 edge ML firmware for detecting illegal chainsaw and mining activity in protected forest areas. Runs on-device audio classification using Edge Impulse and transmits alerts via LoRa 433MHz.
+This is the ESP32-S3 firmware for SilentScout. It captures audio from an INMP441 mic, runs Edge Impulse inference to detect chainsaw/mining sounds, and sends LoRa alerts when a threat is confirmed.
 
-## Hardware Requirements
+Everything runs offline — no WiFi, no cloud. Just the mic, the ML model, and LoRa.
 
-| Component | Specification |
-|-----------|--------------|
+## What you need
+
+| Part | Spec |
+|------|------|
 | MCU | ESP32-S3 DevKitC-1 N16R8 (16MB Flash, 8MB PSRAM) |
-| Microphone | INMP441 MEMS I2S Microphone |
-| Radio | LoRa Ra-02 SX1278 433MHz (SPI) |
-| Power | Solar + 18650 battery, 3.3V rail |
+| Mic | INMP441 I2S MEMS Microphone |
+| Radio | Ra-02 SX1278 433MHz LoRa module |
+| Power | Solar panel + 18650 battery on 3.3V rail |
 
-## Pin Wiring
+## Wiring
 
-### INMP441 Microphone (I2S)
-| INMP441 Pin | ESP32-S3 GPIO |
-|-------------|---------------|
-| WS (LRCLK) | GPIO 1 |
-| SD (DOUT)   | GPIO 2 |
-| SCK (BCLK)  | GPIO 42 |
-| L/R         | GND (left channel) |
-| VDD         | 3.3V |
-| GND         | GND |
+### INMP441 → ESP32-S3
+| INMP441 | GPIO |
+|---------|------|
+| WS | 1 |
+| SD | 2 |
+| SCK | 42 |
+| L/R | GND |
+| VDD | 3.3V |
+| GND | GND |
 
-### LoRa SX1278 (SPI)
-| SX1278 Pin | ESP32-S3 GPIO |
-|------------|---------------|
-| SCK        | GPIO 18 |
-| MISO       | GPIO 19 |
-| MOSI       | GPIO 23 |
-| NSS (CS)   | GPIO 5 |
-| RST        | GPIO 14 |
-| DIO0       | GPIO 26 |
-| VCC        | 3.3V |
-| GND        | GND |
+### SX1278 → ESP32-S3
+| SX1278 | GPIO |
+|--------|------|
+| SCK | 18 |
+| MISO | 19 |
+| MOSI | 23 |
+| NSS | 5 |
+| RST | 14 |
+| DIO0 | 26 |
+| VCC | 3.3V |
+| GND | GND |
 
-## Build & Flash
+## Building
 
-### Prerequisites
-- [PlatformIO CLI](https://platformio.org/install/cli) or VS Code with PlatformIO extension
-- USB-C cable for ESP32-S3
+You need PlatformIO (CLI or the VS Code extension).
 
-### Edge Impulse Library Setup
-1. Export your trained model from Edge Impulse as an **Arduino library**
-2. Extract the library folder into `firmware/lib/`
+### Setting up the Edge Impulse model
+
+1. Go to Edge Impulse, train your model, and export as **Arduino library**
+2. Drop the exported folder into `firmware/lib/`:
    ```
    firmware/lib/project-1_inferencing/
    ```
-3. The model must be trained for **microphone/audio** input with classes: `chainsaw`, `mining`, `ambient`
+3. Make sure the model is trained on mic input with these classes: `chainsaw`, `mining`, `ambient`
 
-### Build & Upload
+### Flash it
+
 ```bash
 cd firmware
-
-# Build
-pio run
-
-# Upload to ESP32-S3
-pio run --target upload
-
-# Monitor serial output
-pio device monitor --baud 115200
+pio run                        # just build
+pio run --target upload        # build + flash
+pio device monitor --baud 115200  # serial monitor
 ```
 
-## Configuration
+## Config
 
-All settings are in [`src/config.h`](src/config.h):
+Everything's in `src/config.h` — change it before flashing:
 
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `NODE_ID` | `"N1"` | Unique node identifier |
-| `NODE_LAT` / `NODE_LNG` | `6.9270 / 79.8610` | Deployment coordinates (stub) |
-| `CONFIDENCE_THRESHOLD` | `0.85` (85%) | Minimum confidence for valid detection |
-| `CONSECUTIVE_REQUIRED` | `3` | Same class N times before alert |
-| `ALERT_COOLDOWN_MS` | `10000` (10s) | Cooldown between LoRa transmissions |
-| `HEARTBEAT_INTERVAL_MS` | `20000` (20s) | Periodic heartbeat interval |
-| `LORA_FREQUENCY` | `433 MHz` | LoRa ISM band frequency |
-| `LORA_TX_POWER` | `17 dBm` | Transmit power |
+| What | Default | Notes |
+|------|---------|-------|
+| `NODE_ID` | `"N1"` | Change this per node |
+| `NODE_LAT` / `NODE_LNG` | `6.9270 / 79.8610` | Hardcoded for now (no GPS) |
+| `CONFIDENCE_THRESHOLD` | `85%` | Min confidence to count a detection |
+| `CONSECUTIVE_REQUIRED` | `3` | Has to detect same thing 3x in a row |
+| `ALERT_COOLDOWN_MS` | `10s` | Wait time between LoRa sends |
+| `HEARTBEAT_INTERVAL_MS` | `20s` | How often to send "I'm alive" packet |
+| `LORA_FREQUENCY` | `433 MHz` | ISM band |
+| `LORA_TX_POWER` | `17 dBm` | Can go up to 20 but uses more battery |
 
-## LoRa Packet Format
+## LoRa packet format
 
-Comma-separated string format:
+We use a simple CSV string over LoRa. Keeps it compact.
 
-**Alert packet:**
+Alert:
 ```
 N1,alert,chainsaw,0.95,3,123456789,6.9270,79.8610
 ```
 
-**Heartbeat packet:**
+Heartbeat:
 ```
 N1,data,ambient,0.00,0,123456789,6.9270,79.8610
 ```
 
-| Field | Description |
-|-------|-------------|
-| nodeId | Node identifier |
-| type | `alert` or `data` |
-| alertType | Detected class (`chainsaw`, `mining`, `ambient`) |
-| confidence | Classifier confidence (0.00–1.00) |
-| consecutiveCount | Number of consecutive detections |
-| timestampMs | `millis()` since boot |
-| lat | Latitude |
-| lng | Longitude |
+Fields: `nodeId, type, class, confidence, consecutiveCount, timestamp_ms, lat, lng`
 
-## Architecture
+The receiver node will parse this and convert to JSON for the desktop app.
+
+## How the detection works
 
 ```
-┌─────────────────────────────────────────────┐
-│              ESP32-S3 Sentinel              │
-│                                             │
-│  ┌──────────┐    ┌───────────┐    ┌──────┐  │
-│  │ INMP441  │───▶│ Edge      │───▶│ Alert│  │
-│  │ I2S Mic  │    │ Impulse   │    │ Logic│  │
-│  └──────────┘    │ Inference │    └──┬───┘  │
-│                  └───────────┘       │      │
-│                                      ▼      │
-│                               ┌──────────┐  │
-│                               │ LoRa TX  │  │
-│                               │ SX1278   │  │
-│                               └─────┬────┘  │
-│                                     │       │
-└─────────────────────────────────────┼───────┘
-                                      │ 433MHz
-                               ┌──────▼────┐
-                               │ LoRa RX   │
-                               │ Gateway   │
-                               └─────┬─────┘
-                                     │ USB
-                               ┌─────▼─────┐
-                               │ Desktop   │
-                               │ Dashboard │
-                               └───────────┘
+  INMP441 mic
+      │
+      ▼
+  I2S capture (16kHz 16-bit)
+      │
+      ▼
+  Edge Impulse inference
+      │
+      ├── ambient? → do nothing, reset counter
+      │
+      ├── chainsaw/mining + confidence >= 85%?
+      │       │
+      │       ▼
+      │   same class 3x in a row?
+      │       │
+      │       YES → send LoRa alert
+      │
+      ▼
+  light sleep → repeat
 ```
 
-## Power Management
+## Power saving stuff
 
-- WiFi and Bluetooth disabled at boot
-- LoRa radio sleeps between transmissions
-- Light sleep between inference cycles (~100ms)
-- Watchdog timer (30s) prevents firmware hangs
+- WiFi + BT turned off at boot (we don't need them)
+- LoRa module sleeps except when actually transmitting
+- CPU goes into light sleep between inference cycles
+- Watchdog timer set to 30s in case something hangs
 
-## Code Structure
+## Files
 
-| File | Purpose |
-|------|---------|
-| `src/main.cpp` | Setup, inference loop, alert logic |
-| `src/config.h` | All pin definitions and constants |
-| `src/audio_capture.h/.cpp` | INMP441 I2S microphone interface |
-| `src/lora_handler.h/.cpp` | LoRa SX1278 TX and power control |
+| File | What it does |
+|------|-------------|
+| `src/main.cpp` | Main loop — capture, infer, alert, sleep, repeat |
+| `src/config.h` | Pin defs, thresholds, timing constants |
+| `src/audio_capture.h/.cpp` | I2S driver setup and buffer capture |
+| `src/lora_handler.h/.cpp` | LoRa init, send alert/heartbeat, sleep/wake |

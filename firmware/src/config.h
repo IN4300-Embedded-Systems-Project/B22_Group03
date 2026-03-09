@@ -1,5 +1,5 @@
 /* =============================================================================
- * config.h — Forest Acoustic Sentinel Configuration
+ * config.h — SilentScout Configuration
  *
  * All pin definitions, thresholds, and constants in one place.
  * Modify these values to match your hardware wiring and deployment needs.

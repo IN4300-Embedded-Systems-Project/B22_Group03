@@ -1,7 +1,7 @@
 {
-  "name": "jungle-protection-system",
+  "name": "silentscout-desktop",
   "version": "1.0.0",
-  "description": "Single-node jungle monitoring system for LoRa-based threat detection",
+  "description": "SilentScout desktop dashboard for acoustic threat detection via LoRa",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
