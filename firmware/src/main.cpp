@@ -26,6 +26,14 @@ static int16_t* audio_buffer = nullptr;
 static unsigned long lastHeartbeatTime = 0;
 
 // ---------------------------------------------------------------------------
+// Alert logic state — consecutive detection for false positive reduction
+// ---------------------------------------------------------------------------
+static char   lastDetectedClass[32] = "";  // Last non-ambient class detected
+static int    consecutiveCount      = 0;    // Consecutive same-class detections
+static float  lastConfidence        = 0.0f; // Confidence of last valid detection
+static bool   alertConfirmed        = false;// True when consecutive threshold met
+
+// ---------------------------------------------------------------------------
 // Edge Impulse callback — converts int16 audio samples to float
 // Used by the EI signal_t interface
 // ---------------------------------------------------------------------------
@@ -127,7 +135,54 @@ void loop() {
                       ei_result.classification[ix].value);
     }
 
-    // ---- Step 4: Send periodic heartbeat ----
+    // ---- Step 4: Alert logic — consecutive detection tracking ----
+    // Find the class with the highest confidence score
+    float  maxConfidence = 0.0f;
+    int    maxIndex      = 0;
+    for (size_t ix = 0; ix < EI_CLASSIFIER_LABEL_COUNT; ix++) {
+        if (ei_result.classification[ix].value > maxConfidence) {
+            maxConfidence = ei_result.classification[ix].value;
+            maxIndex = ix;
+        }
+    }
+
+    const char* topClass = ei_result.classification[maxIndex].label;
+
+    // Only count detections above confidence threshold and not "ambient"
+    if (maxConfidence >= CONFIDENCE_THRESHOLD && strcmp(topClass, "ambient") != 0) {
+        // Check if same class as last detection
+        if (strcmp(topClass, lastDetectedClass) == 0) {
+            consecutiveCount++;
+        } else {
+            // Different threat class — reset counter
+            consecutiveCount = 1;
+            strncpy(lastDetectedClass, topClass, sizeof(lastDetectedClass) - 1);
+            lastDetectedClass[sizeof(lastDetectedClass) - 1] = '\0';
+        }
+        lastConfidence = maxConfidence;
+
+        Serial.printf("[ALERT] Threat: %s (%.1f%%) — consecutive: %d/%d\n",
+                      topClass, maxConfidence * 100.0f, consecutiveCount,
+                      CONSECUTIVE_REQUIRED);
+
+        // Check if consecutive threshold is met
+        if (consecutiveCount >= CONSECUTIVE_REQUIRED) {
+            alertConfirmed = true;
+            Serial.printf("[ALERT] >>> CONFIRMED: %s detected %d consecutive times! <<<\n",
+                          lastDetectedClass, consecutiveCount);
+        }
+    } else {
+        // Ambient or below threshold — reset consecutive counter
+        if (consecutiveCount > 0) {
+            Serial.printf("[ALERT] Reset — %s (%.1f%%) below threshold or ambient\n",
+                          topClass, maxConfidence * 100.0f);
+        }
+        consecutiveCount = 0;
+        lastDetectedClass[0] = '\0';
+        alertConfirmed = false;
+    }
+
+    // ---- Step 5: Send periodic heartbeat ----
     if (millis() - lastHeartbeatTime >= HEARTBEAT_INTERVAL_MS) {
         lora_send_heartbeat();
         lastHeartbeatTime = millis();
