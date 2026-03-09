@@ -19,6 +19,8 @@
 #include "esp_sleep.h"
 #include "esp_wifi.h"
 #include "esp_bt.h"
+#include "esp_system.h"
+#include "esp_task_wdt.h"
 
 // ---------------------------------------------------------------------------
 // Audio buffer — allocated in PSRAM, sized to Edge Impulse model input
@@ -37,6 +39,12 @@ static char   lastDetectedClass[32] = "";  // Last non-ambient class detected
 static int    consecutiveCount      = 0;    // Consecutive same-class detections
 static float  lastConfidence        = 0.0f; // Confidence of last valid detection
 static bool   alertConfirmed        = false;// True when consecutive threshold met
+
+// ---------------------------------------------------------------------------
+// Inference cycle counter for diagnostics
+// ---------------------------------------------------------------------------
+static unsigned long inferenceCount  = 0;
+static unsigned long errorCount      = 0;
 
 // ---------------------------------------------------------------------------
 // Edge Impulse callback — converts int16 audio samples to float
@@ -60,6 +68,18 @@ void setup() {
     esp_wifi_stop();
     esp_bt_controller_disable();
     Serial.println("[POWER] WiFi and Bluetooth disabled");
+
+    // ---- Print boot reason for diagnostics ----
+    esp_reset_reason_t reason = esp_reset_reason();
+    Serial.printf("[MAIN] Boot reason: %d", reason);
+    switch (reason) {
+        case ESP_RST_POWERON:  Serial.println(" (power-on)");   break;
+        case ESP_RST_SW:       Serial.println(" (software)");   break;
+        case ESP_RST_PANIC:    Serial.println(" (panic/crash)"); break;
+        case ESP_RST_WDT:      Serial.println(" (watchdog)");   break;
+        case ESP_RST_DEEPSLEEP:Serial.println(" (deep sleep)"); break;
+        default:               Serial.println(" (other)");      break;
+    }
 
     Serial.println();
     Serial.println("========================================");
@@ -108,16 +128,28 @@ void setup() {
     }
 
     Serial.println("[MAIN] Sentinel active — starting inference loop\n");
+
+    // ---- Initialize watchdog timer (30s timeout) ----
+    esp_task_wdt_init(30, true);  // 30 second timeout, panic on trigger
+    esp_task_wdt_add(NULL);       // Add current task to WDT
+    Serial.println("[MAIN] Watchdog timer initialized (30s)");
 }
 
 // ---------------------------------------------------------------------------
 // Main Loop — Capture audio → Run inference → Print results
 // ---------------------------------------------------------------------------
 void loop() {
+    // Reset watchdog timer at start of each cycle
+    esp_task_wdt_reset();
+
+    inferenceCount++;
+
     // ---- Step 1: Capture audio ----
     int result = audio_capture_buffer(audio_buffer, EI_CLASSIFIER_RAW_SAMPLE_COUNT);
     if (result != 0) {
-        Serial.println("[MAIN] ERROR: Audio capture failed");
+        errorCount++;
+        Serial.printf("[AUDIO] ERROR: Capture failed (errors: %lu/%lu)\n",
+                      errorCount, inferenceCount);
         delay(1000);
         return;
     }
@@ -130,14 +162,16 @@ void loop() {
     ei_impulse_result_t ei_result = { 0 };
     EI_IMPULSE_ERROR err = run_classifier(&signal, &ei_result, false);
     if (err != EI_IMPULSE_OK) {
-        Serial.printf("[INFER] ERROR: Classifier failed (err=%d)\n", err);
+        errorCount++;
+        Serial.printf("[INFER] ERROR: Classifier failed (err=%d, errors: %lu/%lu)\n",
+                      err, errorCount, inferenceCount);
         delay(1000);
         return;
     }
 
     // ---- Step 3: Print classification results ----
-    Serial.printf("[INFER] DSP: %d ms | Classification: %d ms\n",
-                  ei_result.timing.dsp, ei_result.timing.classification);
+    Serial.printf("[INFER] #%lu | DSP: %d ms | Classification: %d ms\n",
+                  inferenceCount, ei_result.timing.dsp, ei_result.timing.classification);
 
     for (size_t ix = 0; ix < EI_CLASSIFIER_LABEL_COUNT; ix++) {
         Serial.printf("[INFER]   %s: %.4f\n",
@@ -220,6 +254,7 @@ void loop() {
     // ---- Step 7: Light sleep between inference cycles ----
     // Use timed light sleep to reduce power consumption
     // CPU halts but peripherals stay active, wakes on timer
+    Serial.flush();  // Ensure all serial data is sent before sleeping
     esp_sleep_enable_timer_wakeup(LIGHT_SLEEP_DURATION_US);
     esp_light_sleep_start();
 }

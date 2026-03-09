@@ -83,13 +83,20 @@ int audio_capture_buffer(int16_t* buffer, size_t n_samples) {
     int32_t raw32[chunk_size];
     size_t bytes_read = 0;
     size_t collected = 0;
+    int    readErrors = 0;
 
     while (collected < n_samples) {
         // Read a chunk of 32-bit samples from I2S DMA
         esp_err_t err = i2s_read(I2S_PORT, raw32, sizeof(raw32), &bytes_read, 100);
         if (err != ESP_OK) {
-            Serial.printf("[AUDIO] ERROR: i2s_read failed (err=%d)\n", err);
-            return -1;
+            readErrors++;
+            Serial.printf("[AUDIO] ERROR: i2s_read failed (err=%d, attempt=%d)\n",
+                          err, readErrors);
+            if (readErrors >= 3) {
+                Serial.println("[AUDIO] ERROR: Too many read failures, aborting capture");
+                return -1;
+            }
+            continue;  // Retry
         }
 
         // Convert 32-bit I2S data → 16-bit PCM

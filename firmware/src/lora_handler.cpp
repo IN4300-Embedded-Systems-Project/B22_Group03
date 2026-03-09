@@ -81,7 +81,11 @@ bool lora_send_alert(const char* alertType, float confidence,
     // Transmit packet
     LoRa.beginPacket();
     LoRa.print(packet);
-    LoRa.endPacket(true);  // true = async (non-blocking) TX
+    int txResult = LoRa.endPacket(true);  // true = async (non-blocking) TX
+
+    if (txResult == 0) {
+        Serial.println("[LORA] WARNING: endPacket returned 0 (possible TX issue)");
+    }
 
     // Record transmission time for cooldown tracking
     lastTxTime = millis();
@@ -114,7 +118,11 @@ bool lora_send_heartbeat(void) {
     // Transmit packet
     LoRa.beginPacket();
     LoRa.print(packet);
-    LoRa.endPacket(true);
+    int txResult = LoRa.endPacket(true);
+
+    if (txResult == 0) {
+        Serial.println("[LORA] WARNING: endPacket returned 0 (possible TX issue)");
+    }
 
     // Record transmission time
     lastTxTime = millis();
