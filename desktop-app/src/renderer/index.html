@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Jungle Protection System – Node J01</title>
+  <link rel="stylesheet" href="style.css" />
+  <!-- Chart.js via CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+</head>
+
+<body>
+
+  <!-- ── HEADER ── -->
+  <header class="header">
+    <div class="header-left">
+      <span class="header-icon">🌲</span>
+      <div>
+        <h1 class="header-title">Jungle Protection System</h1>
+        <p class="header-subtitle">Node J01 — Real-time Threat Monitor</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="port-row">
+        <select id="portSelect" class="port-select">
+          <option value="">Select COM Port…</option>
+        </select>
+        <button id="connectBtn" class="btn btn-connect">Connect</button>
+        <button id="disconnectBtn" class="btn btn-disconnect" disabled>Disconnect</button>
+      </div>
+      <div id="serialStatus" class="serial-status serial-disconnected">● Disconnected</div>
+    </div>
+  </header>
+
+  <!-- ── ALERT BANNER ── -->
+  <div id="alertBanner" class="alert-banner safe">
+    <div class="alert-icon" id="alertIcon">🛡️</div>
+    <div class="alert-body">
+      <div class="alert-title" id="alertTitle">NO THREAT DETECTED</div>
+      <div class="alert-meta" id="alertMeta">Monitoring active — all clear</div>
+    </div>
+    <div class="alert-time" id="alertTime">—</div>
+  </div>
+
+  <!-- ── MAIN GRID ── -->
+  <main class="main-grid">
+
+    <!-- Node Status Card -->
+    <section class="card card-status">
+      <h2 class="card-title">📡 Node Status</h2>
+      <div class="status-indicator">
+        <span class="status-dot" id="statusDot"></span>
+        <span class="status-label" id="statusLabel">UNKNOWN</span>
+      </div>
+      <div class="status-rows">
+        <div class="status-row">
+          <span class="sr-label">Last Heartbeat</span>
+          <span class="sr-value" id="lastHeartbeat">—</span>
+        </div>
+        <div class="status-row">
+          <span class="sr-label">RSSI</span>
+          <span class="sr-value rssi-val" id="currentRssi">— dBm</span>
+        </div>
+        <div class="status-row">
+          <span class="sr-label">Alerts Today</span>
+          <span class="sr-value" id="alertCount">0</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- RSSI Chart Card -->
+    <section class="card card-chart">
+      <div class="chart-header">
+        <h2 class="card-title">📶 RSSI Signal Strength</h2>
+        <span class="rssi-large" id="rssiLarge">— dBm</span>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="rssiChart"></canvas>
+      </div>
+    </section>
+
+    <!-- Alert Log Card -->
+    <section class="card card-log">
+      <div class="log-header">
+        <h2 class="card-title">📋 Event Log</h2>
+        <button id="saveLogsBtn" class="btn btn-save">💾 Save CSV</button>
+      </div>
+      <div class="log-scroll">
+        <table class="log-table">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Event</th>
+              <th>RSSI</th>
+            </tr>
+          </thead>
+          <tbody id="logBody">
+            <tr class="log-empty-row">
+              <td colspan="3">No events yet. Connect to a COM port to start monitoring.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="renderer.js"></script>
+</body>
+
+</html>
