@@ -25,7 +25,7 @@ Basically there's a sensor node sitting out in the forest with a mic and an ML m
 
 - ESP32-S3 DevKitC-1 with 16MB flash and 8MB PSRAM
 - INMP441 MEMS mic over I2S, sampling at 16kHz
-- Edge Impulse model runs locally - classifies chainsaw / mining / ambient
+- Edge Impulse model runs locally - binary classification: `alert` vs `not_alert`
 - LoRa SX1278 433MHz for sending alerts (no WiFi needed)
 - Solar + 18650 battery, uses light sleep to save power
 - Needs 3 consecutive detections at 85%+ confidence before triggering alert
@@ -51,50 +51,41 @@ Check [firmware/README.md](firmware/README.md) for wiring and build steps.
 
 Training data sourced from the [FSC22 dataset on Kaggle](https://www.kaggle.com/datasets/irmiot22/fsc22-dataset/data) - a forest sound classification dataset with 27 audio classes.
 
-We mapped the original classes down to 3 labels that fit the use case:
+We ended up going with a binary classification approach - `alert` vs `not_alert`. Trying to distinguish chainsaw from mining from ambient added complexity without improving the core goal, which is just knowing whether something threatening is happening.
 
-**Threat (mining / illegal logging)**
+**alert** - any sound associated with illegal logging or mining activity
 
-| Kaggle Class | Our Label | Reason |
-|---|---|---|
-| Chainsaw (#11) | chainsaw | Direct match - primary threat signal |
-| Axe (#10) | mining | Illegal logging activity |
-| Handsaw (#13) | mining | Manual cutting activity |
-| WoodChop (#16) | mining | Illegal activity |
-| Generator (#12) | mining | Powers illegal mining equipment |
-
-**Ambient / Nature**
-
-| Kaggle Class | Our Label |
+| Kaggle Class | Reason |
 |---|---|
-| Rain (#2) | ambient |
-| Wind (#5) | ambient |
-| Silence (#6) | ambient |
-| BirdChirping (#23) | ambient |
-| Insect (#21) | ambient |
-| Frog (#22) | ambient |
-| WingFlaping (#24) | ambient |
-| TreeFalling (#7) | ambient |
-| Squirrel (#27) | ambient |
+| Chainsaw (#11) | Primary threat signal |
+| Axe (#10) | Illegal logging |
+| Handsaw (#13) | Manual cutting |
+| WoodChop (#16) | Illegal activity |
+| Generator (#12) | Powers illegal mining equipment |
 
-**Interference / Background Noise**
+**not_alert** - everything else (nature sounds + interference)
 
-| Kaggle Class | Our Label |
-|---|---|
-| VehicleEngine (#9) | other |
-| Helicopter (#8) | other |
-| Thunderstorm (#3) | other |
-| WaterDrops (#4) | other |
-| Footsteps (#19) | other |
-| Speaking (#18) | other |
+| Kaggle Class |
+|---|
+| Rain (#2), Wind (#5), Silence (#6) |
+| BirdChirping (#23), Insect (#21), Frog (#22), WingFlaping (#24) |
+| TreeFalling (#7), Squirrel (#27) |
+| VehicleEngine (#9), Helicopter (#8), Thunderstorm (#3) |
+| WaterDrops (#4), Footsteps (#19), Speaking (#18) |
 
-Merging related Kaggle classes into broader labels keeps the model focused on what actually matters - detecting threats vs. ignoring noise. The `other` class acts as a catch-all so the model has a safe "none of the above" bucket and doesn't force a threat label on unrelated sounds.
+Collapsing 3+ classes into binary made the model cleaner and the confidence scores more meaningful - a high `alert` score is a strong signal, not just a relative winner between similar classes.
 
 ## Model
 
 ### Train / Test Split
 
 ![Train/Test Split](assets/ss-1.png)
+
+### Accuracy
+
+![Model Accuracy](assets/ss-5.png)
+
+![Confusion Matrix](assets/ss-6.png)
 
 ## Design decisions
 
