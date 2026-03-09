@@ -15,6 +15,11 @@
 #include "audio_capture.h"
 #include "lora_handler.h"
 
+// Power management includes
+#include "esp_sleep.h"
+#include "esp_wifi.h"
+#include "esp_bt.h"
+
 // ---------------------------------------------------------------------------
 // Audio buffer — allocated in PSRAM, sized to Edge Impulse model input
 // ---------------------------------------------------------------------------
@@ -50,6 +55,11 @@ static int audio_signal_get_data(size_t offset, size_t length, float* out_ptr) {
 void setup() {
     Serial.begin(SERIAL_BAUD_RATE);
     while (!Serial && millis() < 3000);
+
+    // ---- Power: Disable WiFi and Bluetooth radios to save power ----
+    esp_wifi_stop();
+    esp_bt_controller_disable();
+    Serial.println("[POWER] WiFi and Bluetooth disabled");
 
     Serial.println();
     Serial.println("========================================");
@@ -206,6 +216,12 @@ void loop() {
         lora_send_heartbeat();
         lastHeartbeatTime = millis();
     }
+
+    // ---- Step 7: Light sleep between inference cycles ----
+    // Use timed light sleep to reduce power consumption
+    // CPU halts but peripherals stay active, wakes on timer
+    esp_sleep_enable_timer_wakeup(LIGHT_SLEEP_DURATION_US);
+    esp_light_sleep_start();
 }
 
 // ---------------------------------------------------------------------------
