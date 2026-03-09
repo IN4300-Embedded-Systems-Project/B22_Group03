@@ -182,7 +182,26 @@ void loop() {
         alertConfirmed = false;
     }
 
-    // ---- Step 5: Send periodic heartbeat ----
+    // ---- Step 5: LoRa alert transmission on confirmed threat ----
+    if (alertConfirmed && !lora_is_cooldown_active()) {
+        Serial.printf("[LORA] Sending alert: %s (%.1f%%, %dx)\n",
+                      lastDetectedClass, lastConfidence * 100.0f, consecutiveCount);
+
+        bool sent = lora_send_alert(lastDetectedClass, lastConfidence,
+                                    consecutiveCount, millis());
+        if (sent) {
+            Serial.println("[LORA] Alert packet transmitted successfully");
+        } else {
+            Serial.println("[LORA] ERROR: Failed to send alert packet");
+        }
+
+        // Reset alert state after transmission attempt
+        alertConfirmed = false;
+    } else if (alertConfirmed && lora_is_cooldown_active()) {
+        Serial.println("[LORA] Alert confirmed but cooldown active — skipping TX");
+    }
+
+    // ---- Step 6: Send periodic heartbeat ----
     if (millis() - lastHeartbeatTime >= HEARTBEAT_INTERVAL_MS) {
         lora_send_heartbeat();
         lastHeartbeatTime = millis();
