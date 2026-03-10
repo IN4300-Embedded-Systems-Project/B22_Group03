@@ -1,4 +1,4 @@
-# SilentScout — Acoustic Threat Detection System
+# SilentScout - Acoustic Threat Detection System
 
 We're building a system that listens for illegal chainsaw and mining sounds in forests and sends out LoRa alerts when it picks something up. The whole thing runs offline — no WiFi, no cloud — just an ESP32-S3 doing edge inference on audio and pushing alerts over 433MHz LoRa.
 
