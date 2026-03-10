@@ -90,6 +90,12 @@ We mapped the original classes down to 3 labels that fit the use case:
 
 Merging related Kaggle classes into broader labels keeps the model focused on what actually matters - detecting threats vs. ignoring noise. The `other` class acts as a catch-all so the model has a safe "none of the above" bucket and doesn't force a threat label on unrelated sounds.
 
+## Model
+
+### Train / Test Split
+
+![Train/Test Split](assets/ss-1.png)
+
 ## Design decisions
 
 - Edge inference on the device itself means zero latency waiting on a server and works in dead zones with no connectivity
