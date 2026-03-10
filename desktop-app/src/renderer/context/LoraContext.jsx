@@ -6,7 +6,7 @@ export function LoraProvider({ children }) {
     const [nodes, setNodes] = useState([])        // Array of NodeEntry
     const [alerts, setAlerts] = useState([])      // Alert history (newest first)
     const [activeAlert, setActiveAlert] = useState(null)  // Latest unread alert
-    const [serialStatus, setSerialStatus] = useState({ open: false, port: '—' })
+    const [serialStatus, setSerialStatus] = useState({ open: false, port: '-' })
 
     // Bootstrap: load persisted data on mount
     useEffect(() => {

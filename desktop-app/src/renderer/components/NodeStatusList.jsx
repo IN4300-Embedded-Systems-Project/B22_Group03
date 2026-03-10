@@ -34,7 +34,7 @@ function NodeItem({ node }) {
     const isOnline = node.status === 'online'
     const lastSeen = node.lastSeen
         ? timeSince(node.lastSeen)
-        : '—'
+        : '-'
 
     return (
         <li className={`node-item ${isOnline ? 'node-online' : 'node-offline'}`}>
@@ -48,7 +48,7 @@ function NodeItem({ node }) {
             <div className="node-item-meta">
                 <span className="meta-label">RSSI</span>
                 <span className={`meta-value rssi-value ${rssiClass(node.rssi)}`}>
-                    {node.rssi != null ? `${node.rssi} dBm` : '—'}
+                    {node.rssi != null ? `${node.rssi} dBm` : '-'}
                 </span>
             </div>
             <div className="node-item-meta">

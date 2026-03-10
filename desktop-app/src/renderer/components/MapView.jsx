@@ -43,7 +43,7 @@ function NodeMarker({ node }) {
             <LeafletTooltip>
                 <strong>{node.nodeId}</strong><br />
                 Status: {node.status}<br />
-                RSSI: {node.rssi != null ? `${node.rssi} dBm` : '—'}<br />
+                RSSI: {node.rssi != null ? `${node.rssi} dBm` : '-'}<br />
                 {node.lastMessage && <span>Msg: {node.lastMessage}</span>}
             </LeafletTooltip>
         </CircleMarker>

@@ -1,5 +1,5 @@
 /* =============================================================================
- * lora_handler.h — LoRa SX1278 Communication Interface
+ * lora_handler.h - LoRa SX1278 Communication Interface
  *
  * Provides initialization, alert transmission, heartbeat sending,
  * cooldown management, and power control for the LoRa radio module.
@@ -21,10 +21,10 @@ bool lora_init(void);
 // Send an alert packet via LoRa
 // Packet format: NODE_ID,alert,ALERT_TYPE,CONFIDENCE,COUNT,TIMESTAMP,LAT,LNG
 // Parameters:
-//   alertType       — detected threat class (e.g., "chainsaw", "mining")
-//   confidence      — classifier confidence (0.0 - 1.0)
-//   consecutiveCount — number of consecutive detections
-//   timestampMs     — millis() timestamp
+//   alertType       - detected threat class (e.g., "chainsaw", "mining")
+//   confidence      - classifier confidence (0.0 - 1.0)
+//   consecutiveCount - number of consecutive detections
+//   timestampMs     - millis() timestamp
 // Returns:
 //   true if packet sent successfully, false otherwise
 // ---------------------------------------------------------------------------

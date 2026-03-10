@@ -1,5 +1,5 @@
 /* =============================================================================
- * config.h — SilentScout Configuration
+ * config.h - SilentScout Configuration
  *
  * All pin definitions, thresholds, and constants in one place.
  * Modify these values to match your hardware wiring and deployment needs.
@@ -12,11 +12,11 @@
 // Node Identity
 // ---------------------------------------------------------------------------
 #define NODE_ID         "N1"        // Unique identifier for this sentinel node
-#define NODE_LAT        6.9270f     // Deployment latitude  (stub — no GPS module)
-#define NODE_LNG        79.8610f    // Deployment longitude (stub — no GPS module)
+#define NODE_LAT        6.9270f     // Deployment latitude  (stub - no GPS module)
+#define NODE_LNG        79.8610f    // Deployment longitude (stub - no GPS module)
 
 // ---------------------------------------------------------------------------
-// I2S Microphone — INMP441 Pin Mapping
+// I2S Microphone - INMP441 Pin Mapping
 // ---------------------------------------------------------------------------
 #define I2S_WS_PIN      1           // Word Select  (LRCLK)
 #define I2S_SD_PIN      2           // Serial Data   (DOUT)
@@ -32,7 +32,7 @@
 #define DMA_BUF_LEN         512     // Samples per DMA buffer
 
 // ---------------------------------------------------------------------------
-// LoRa SX1278 (Ra-02 433MHz) Pin Mapping — SPI
+// LoRa SX1278 (Ra-02 433MHz) Pin Mapping - SPI
 // ---------------------------------------------------------------------------
 #define LORA_SCK_PIN    18          // SPI Clock
 #define LORA_MISO_PIN   19          // SPI MISO
@@ -51,7 +51,7 @@
 #define LORA_CODING_RATE    5       // 4/5 coding rate
 
 // ---------------------------------------------------------------------------
-// Detection Thresholds — False Positive Reduction
+// Detection Thresholds - False Positive Reduction
 // ---------------------------------------------------------------------------
 #define CONFIDENCE_THRESHOLD    0.85f   // Minimum confidence to count as valid
 #define CONSECUTIVE_REQUIRED    3       // Same class N times before alert

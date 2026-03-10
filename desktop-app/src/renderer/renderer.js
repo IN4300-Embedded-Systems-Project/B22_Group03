@@ -114,7 +114,7 @@
         alertBanner.className = 'alert-banner danger'
         alertIcon.textContent = '🚨'
         alertTitle.textContent = `${threat.toUpperCase()} DETECTED!`
-        alertMeta.textContent = `RSSI: ${rssi != null ? rssi + ' dBm' : '—'}  |  Immediate action required`
+        alertMeta.textContent = `RSSI: ${rssi != null ? rssi + ' dBm' : '-'}  |  Immediate action required`
         alertTime.textContent = formatTime(timestamp)
         playAlarm()
         // Auto-reset to safe after 15 s with no new alert
@@ -126,8 +126,8 @@
         alertBanner.className = 'alert-banner safe'
         alertIcon.textContent = '🛡️'
         alertTitle.textContent = 'NO THREAT DETECTED'
-        alertMeta.textContent = 'Monitoring active — all clear'
-        alertTime.textContent = '—'
+        alertMeta.textContent = 'Monitoring active - all clear'
+        alertTime.textContent = '-'
     }
 
     // ── Node Status ────────────────────────────────────────────────────────────
@@ -159,7 +159,7 @@
     // ── Log Table ──────────────────────────────────────────────────────────────
     function appendLog(event, rssi, timestamp) {
         const time = formatTime(timestamp)
-        logRows.unshift({ time, event, rssi: rssi != null ? `${rssi} dBm` : '—' })
+        logRows.unshift({ time, event, rssi: rssi != null ? `${rssi} dBm` : '-' })
 
         // Remove placeholder row
         const emptyRow = logBody.querySelector('.log-empty-row')
@@ -171,7 +171,7 @@
         tr.innerHTML = `
       <td class="log-time">${time}</td>
       <td class="log-event">${event}</td>
-      <td class="log-rssi">${rssi != null ? rssi + ' dBm' : '—'}</td>
+      <td class="log-rssi">${rssi != null ? rssi + ' dBm' : '-'}</td>
     `
         logBody.prepend(tr)
 
@@ -268,7 +268,7 @@
             return new Date(iso).toLocaleTimeString('en-GB', {
                 hour: '2-digit', minute: '2-digit', second: '2-digit'
             })
-        } catch { return '—' }
+        } catch { return '-' }
     }
 
 })()

@@ -2,7 +2,7 @@
 
 This is the ESP32-S3 firmware for SilentScout. It captures audio from an INMP441 mic, runs Edge Impulse inference to detect chainsaw/mining sounds, and sends LoRa alerts when a threat is confirmed.
 
-Everything runs offline — no WiFi, no cloud. Just the mic, the ML model, and LoRa.
+Everything runs offline - no WiFi, no cloud. Just the mic, the ML model, and LoRa.
 
 ## What you need
 
@@ -61,7 +61,7 @@ pio device monitor --baud 115200  # serial monitor
 
 ## Config
 
-Everything's in `src/config.h` — change it before flashing:
+Everything's in `src/config.h` - change it before flashing:
 
 | What | Default | Notes |
 |------|---------|-------|
@@ -127,7 +127,7 @@ The receiver node will parse this and convert to JSON for the desktop app.
 
 | File | What it does |
 |------|-------------|
-| `src/main.cpp` | Main loop — capture, infer, alert, sleep, repeat |
+| `src/main.cpp` | Main loop - capture, infer, alert, sleep, repeat |
 | `src/config.h` | Pin defs, thresholds, timing constants |
 | `src/audio_capture.h/.cpp` | I2S driver setup and buffer capture |
 | `src/lora_handler.h/.cpp` | LoRa init, send alert/heartbeat, sleep/wake |

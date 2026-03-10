@@ -1,5 +1,5 @@
 /* =============================================================================
- * lora_handler.cpp — LoRa SX1278 Communication Implementation
+ * lora_handler.cpp - LoRa SX1278 Communication Implementation
  *
  * Manages the SX1278 (Ra-02 433MHz) radio module via SPI.
  * Uses the Sandeep Mistry LoRa library for packet transmission.
@@ -23,7 +23,7 @@ static unsigned long lastTxTime = 0;   // Timestamp of last transmission
 static bool          radioReady = false;
 
 // ---------------------------------------------------------------------------
-// Initialize LoRa radio — configure SPI pins and radio parameters
+// Initialize LoRa radio - configure SPI pins and radio parameters
 // ---------------------------------------------------------------------------
 bool lora_init(void) {
     // Configure SPI pins for LoRa module
@@ -48,11 +48,11 @@ bool lora_init(void) {
     LoRa.setCodingRate4(LORA_CODING_RATE);      // Coding rate denominator (5-8)
     LoRa.enableCrc();                           // Enable CRC for error detection
 
-    // Put radio to sleep immediately — only wake for TX
+    // Put radio to sleep immediately - only wake for TX
     LoRa.sleep();
 
     radioReady = true;
-    Serial.printf("[LORA] Initialized — %.0f MHz, TX %ddBm, SF%d, BW %.0fkHz\n",
+    Serial.printf("[LORA] Initialized - %.0f MHz, TX %ddBm, SF%d, BW %.0fkHz\n",
                   LORA_FREQUENCY / 1E6, LORA_TX_POWER, LORA_SPREADING,
                   LORA_BANDWIDTH / 1E3);
     return true;
@@ -135,7 +135,7 @@ bool lora_send_heartbeat(void) {
 }
 
 // ---------------------------------------------------------------------------
-// Check if cooldown is active — prevents rapid-fire transmissions
+// Check if cooldown is active - prevents rapid-fire transmissions
 // ---------------------------------------------------------------------------
 bool lora_is_cooldown_active(void) {
     if (lastTxTime == 0) return false;  // Never transmitted yet

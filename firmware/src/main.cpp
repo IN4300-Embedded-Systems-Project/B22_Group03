@@ -1,5 +1,5 @@
 /* =============================================================================
- * SilentScout — Acoustic Threat Detection System
+ * SilentScout - Acoustic Threat Detection System
  * ESP32-S3 + INMP441 + LoRa SX1278
  *
  * Detects illegal chainsaw and mining activity using edge ML inference
@@ -23,7 +23,7 @@
 #include "esp_task_wdt.h"
 
 // ---------------------------------------------------------------------------
-// Audio buffer — allocated in PSRAM, sized to Edge Impulse model input
+// Audio buffer - allocated in PSRAM, sized to Edge Impulse model input
 // ---------------------------------------------------------------------------
 static int16_t* audio_buffer = nullptr;
 
@@ -33,7 +33,7 @@ static int16_t* audio_buffer = nullptr;
 static unsigned long lastHeartbeatTime = 0;
 
 // ---------------------------------------------------------------------------
-// Alert logic state — consecutive detection for false positive reduction
+// Alert logic state - consecutive detection for false positive reduction
 // ---------------------------------------------------------------------------
 static char   lastDetectedClass[32] = "";  // Last non-ambient class detected
 static int    consecutiveCount      = 0;    // Consecutive same-class detections
@@ -47,7 +47,7 @@ static unsigned long inferenceCount  = 0;
 static unsigned long errorCount      = 0;
 
 // ---------------------------------------------------------------------------
-// Edge Impulse callback — converts int16 audio samples to float
+// Edge Impulse callback - converts int16 audio samples to float
 // Used by the EI signal_t interface
 // ---------------------------------------------------------------------------
 static int audio_signal_get_data(size_t offset, size_t length, float* out_ptr) {
@@ -105,7 +105,7 @@ void setup() {
 
     // Initialize I2S microphone
     if (audio_init(SAMPLE_RATE) != 0) {
-        Serial.println("[MAIN] FATAL: Audio init failed — halting");
+        Serial.println("[MAIN] FATAL: Audio init failed - halting");
         while (true) { delay(1000); }
     }
 
@@ -121,13 +121,13 @@ void setup() {
 
     // Initialize LoRa radio
     if (!lora_init()) {
-        Serial.println("[MAIN] WARNING: LoRa init failed — continuing without radio");
+        Serial.println("[MAIN] WARNING: LoRa init failed - continuing without radio");
     } else {
         lora_send_heartbeat();
         lastHeartbeatTime = millis();
     }
 
-    Serial.println("[MAIN] Sentinel active — starting inference loop\n");
+    Serial.println("[MAIN] Sentinel active - starting inference loop\n");
 
     // ---- Initialize watchdog timer (30s timeout) ----
     esp_task_wdt_init(30, true);  // 30 second timeout, panic on trigger
@@ -136,7 +136,7 @@ void setup() {
 }
 
 // ---------------------------------------------------------------------------
-// Main Loop — Capture audio → Run inference → Print results
+// Main Loop - Capture audio → Run inference → Print results
 // ---------------------------------------------------------------------------
 void loop() {
     // Reset watchdog timer at start of each cycle
@@ -179,7 +179,7 @@ void loop() {
                       ei_result.classification[ix].value);
     }
 
-    // ---- Step 4: Alert logic — consecutive detection tracking ----
+    // ---- Step 4: Alert logic - consecutive detection tracking ----
     // Find the class with the highest confidence score
     float  maxConfidence = 0.0f;
     int    maxIndex      = 0;
@@ -198,14 +198,14 @@ void loop() {
         if (strcmp(topClass, lastDetectedClass) == 0) {
             consecutiveCount++;
         } else {
-            // Different threat class — reset counter
+            // Different threat class - reset counter
             consecutiveCount = 1;
             strncpy(lastDetectedClass, topClass, sizeof(lastDetectedClass) - 1);
             lastDetectedClass[sizeof(lastDetectedClass) - 1] = '\0';
         }
         lastConfidence = maxConfidence;
 
-        Serial.printf("[ALERT] Threat: %s (%.1f%%) — consecutive: %d/%d\n",
+        Serial.printf("[ALERT] Threat: %s (%.1f%%) - consecutive: %d/%d\n",
                       topClass, maxConfidence * 100.0f, consecutiveCount,
                       CONSECUTIVE_REQUIRED);
 
@@ -216,9 +216,9 @@ void loop() {
                           lastDetectedClass, consecutiveCount);
         }
     } else {
-        // Ambient or below threshold — reset consecutive counter
+        // Ambient or below threshold - reset consecutive counter
         if (consecutiveCount > 0) {
-            Serial.printf("[ALERT] Reset — %s (%.1f%%) below threshold or ambient\n",
+            Serial.printf("[ALERT] Reset - %s (%.1f%%) below threshold or ambient\n",
                           topClass, maxConfidence * 100.0f);
         }
         consecutiveCount = 0;
@@ -242,7 +242,7 @@ void loop() {
         // Reset alert state after transmission attempt
         alertConfirmed = false;
     } else if (alertConfirmed && lora_is_cooldown_active()) {
-        Serial.println("[LORA] Alert confirmed but cooldown active — skipping TX");
+        Serial.println("[LORA] Alert confirmed but cooldown active - skipping TX");
     }
 
     // ---- Step 6: Send periodic heartbeat ----
@@ -260,8 +260,8 @@ void loop() {
 }
 
 // ---------------------------------------------------------------------------
-// Sensor validation — ensure model was trained for microphone input
+// Sensor validation - ensure model was trained for microphone input
 // ---------------------------------------------------------------------------
 #if !defined(EI_CLASSIFIER_SENSOR) || EI_CLASSIFIER_SENSOR != EI_CLASSIFIER_SENSOR_MICROPHONE
-#error "Invalid model for current sensor — must be a microphone/audio model."
+#error "Invalid model for current sensor - must be a microphone/audio model."
 #endif

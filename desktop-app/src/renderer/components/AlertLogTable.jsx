@@ -82,8 +82,8 @@ export default function AlertLogTable() {
                                         {alert.severity}
                                     </span>
                                 </td>
-                                <td className="log-rssi">{alert.rssi != null ? `${alert.rssi} dBm` : '—'}</td>
-                                <td className="log-msg">{alert.message || '—'}</td>
+                                <td className="log-rssi">{alert.rssi != null ? `${alert.rssi} dBm` : '-'}</td>
+                                <td className="log-msg">{alert.message || '-'}</td>
                             </tr>
                         ))}
                     </tbody>

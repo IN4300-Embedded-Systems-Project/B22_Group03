@@ -67,7 +67,7 @@ function parseSerialLine(raw) {
         mainWindow?.webContents.send('node-status', { status: 'online', rssi })
         scheduleOffline()
     } else {
-        // Unknown line — still reset heartbeat if anything arrives
+        // Unknown line - still reset heartbeat if anything arrives
         scheduleOffline()
     }
 }

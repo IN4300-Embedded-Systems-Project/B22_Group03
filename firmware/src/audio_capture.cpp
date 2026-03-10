@@ -1,5 +1,5 @@
 /* =============================================================================
- * audio_capture.cpp — INMP441 I2S Microphone Implementation
+ * audio_capture.cpp - INMP441 I2S Microphone Implementation
  *
  * Configures I2S peripheral on ESP32-S3 to read 32-bit samples from the
  * INMP441 MEMS microphone, then converts to 16-bit PCM for inference.
@@ -16,7 +16,7 @@
 #include "driver/i2s.h"
 
 // ---------------------------------------------------------------------------
-// I2S initialization — configures DMA and pin mapping
+// I2S initialization - configures DMA and pin mapping
 // ---------------------------------------------------------------------------
 int audio_init(uint32_t sample_rate) {
     // I2S configuration for INMP441
@@ -63,7 +63,7 @@ int audio_init(uint32_t sample_rate) {
     // Clear any stale data in DMA buffers
     i2s_zero_dma_buffer(I2S_PORT);
 
-    Serial.printf("[AUDIO] I2S initialized — %d Hz, pins SCK=%d WS=%d SD=%d\n",
+    Serial.printf("[AUDIO] I2S initialized - %d Hz, pins SCK=%d WS=%d SD=%d\n",
                   sample_rate, I2S_SCK_PIN, I2S_WS_PIN, I2S_SD_PIN);
     return 0;
 }
@@ -112,7 +112,7 @@ int audio_capture_buffer(int16_t* buffer, size_t n_samples) {
 }
 
 // ---------------------------------------------------------------------------
-// Deinitialize I2S — release DMA and peripheral resources
+// Deinitialize I2S - release DMA and peripheral resources
 // ---------------------------------------------------------------------------
 void audio_deinit(void) {
     i2s_driver_uninstall(I2S_PORT);
