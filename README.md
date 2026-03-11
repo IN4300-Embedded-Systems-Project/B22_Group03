@@ -79,7 +79,7 @@ Collapsing 3+ classes into binary made the model cleaner and the confidence scor
 
 ### Train / Test Split
 
-![Train/Test Split](assets/ss-1.png)
+![Train/Test Split](assets/ss-7.png)
 
 ### Accuracy
 
